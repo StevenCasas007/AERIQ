@@ -1,0 +1,284 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>AERIQ · Herramienta para ventilación minera</title>
+<meta name="description" content="AERIQ: herramienta para ventilación minera. Funciona sin conexión.">
+<meta name="theme-color" content="#0b1220">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/favicon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="AERIQ">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+<div id="splash" aria-hidden="true">
+  <svg class="fan" viewBox="-50 -50 100 100"><use href="#fan"/></svg>
+  <div class="splash-name">AERIQ</div>
+  <div class="splash-sub">Ventilación · Cálculo · Monitoreo</div>
+</div>
+
+<!-- símbolo del ventilador reutilizable -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#5eead4"/><stop offset="1" stop-color="#38bdf8"/>
+    </linearGradient>
+    <g id="fan">
+      <g fill="url(#g)">
+        <path id="blade" d="M0 0C9-8 15-28 5-44C-10-35-14-14 0 0Z"/>
+        <use href="#blade" transform="rotate(72)"/>
+        <use href="#blade" transform="rotate(144)"/>
+        <use href="#blade" transform="rotate(216)"/>
+        <use href="#blade" transform="rotate(288)"/>
+      </g>
+      <circle r="6" fill="#0b1220" stroke="url(#g)" stroke-width="2.5"/>
+    </g>
+  </defs>
+</svg>
+
+<header class="top">
+  <div class="brand">
+    <svg class="logo" viewBox="-50 -50 100 100"><use href="#fan"/></svg>
+    <div>
+      <h1>AERIQ</h1>
+      <p>Herramienta para ventilación minera</p>
+    </div>
+  </div>
+  <div class="airflow-indicator" id="airflowStatus" role="status" aria-live="polite" title="Estado de conexión">
+    <div class="airflow-stream" aria-hidden="true"><i></i><i></i><i></i></div>
+    <svg class="airflow-fan" viewBox="-50 -50 100 100" aria-hidden="true"><use href="#fan"/></svg>
+    <span class="airflow-label" id="airflowLabel">Flujo activo</span>
+  </div>
+  <button id="installBtn" class="btn ghost small" hidden>Instalar</button>
+</header>
+
+<main>
+  <!-- ============ CALCULAR ============ -->
+  <section id="view-calc" class="view active">
+    <div class="layout">
+      <form id="form" autocomplete="off" novalidate>
+        <div class="card">
+          <label class="field">
+            <span class="lbl">Proyecto / labor</span>
+            <input id="nombre" type="text" placeholder="Ej.: Galería Nv. 3200 – Tajo 5" maxlength="80">
+          </label>
+        </div>
+        <div id="sections"></div>
+
+        <div class="card">
+          <h2>Método de caudal por personal</h2>
+          <div class="seg" role="radiogroup" aria-label="Método de caudal por personal">
+            <label><input type="radio" name="method" value="original" checked><span>Original<small>3 ó 6 m³/min·pers.</small></span></label>
+            <label><input type="radio" name="method" value="escalonado"><span>Por rangos<small>3 · 4 · 5 · 6</small></span></label>
+          </div>
+          <p class="hint" id="methodHint"></p>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="clearBtn" class="btn ghost">Limpiar</button>
+        </div>
+      </form>
+
+      <aside id="result" class="card result" aria-live="polite">
+        <div class="res-head">
+          <span class="lbl">Caudal total requerido</span>
+          <div class="seg units" role="radiogroup" aria-label="Unidad">
+            <label><input type="radio" name="unit" value="m3min" checked><span>m³/min</span></label>
+            <label><input type="radio" name="unit" value="cfm"><span>CFM</span></label>
+          </div>
+        </div>
+        <div class="big"><span id="total">0</span><small id="unitLbl">m³/min</small></div>
+        <div class="sub" id="subtotalLine"></div>
+
+        <div id="bars" class="bars"></div>
+        <div id="governing" class="gov"></div>
+        <ul id="warnings" class="warn"></ul>
+
+        <div class="actions wrap">
+          <button type="button" id="saveBtn" class="btn primary">Guardar</button>
+          <button type="button" id="shareBtn" class="btn">Compartir</button>
+          <button type="button" id="printBtn" class="btn">PDF / Imprimir</button>
+        </div>
+      </aside>
+    </div>
+  </section>
+
+
+  <!-- ============ RESISTENCIA DE LA MINA ============ -->
+  <section id="view-resistance" class="view">
+    <h2 class="page-h">Resistencia de la mina</h2>
+    <p class="intro">Herramientas independientes: resistencia equivalente para circuitos serie/paralelo y análisis de redes malladas con datos físicos de las galerías.</p>
+    <div class="res-method-tabs" role="tablist" aria-label="Método de análisis">
+      <button type="button" class="btn small active" data-rmethod="equivalent">Resistencias equivalentes</button>
+      <button type="button" class="btn small" data-rmethod="mesh">Análisis de red mallada</button>
+    </div>
+    <div class="resistance-workspace">
+      <section class="card res-drawing-card">
+        <div class="mine-toolbar res-toolbar">
+          <button id="resNew" class="btn small">＋ Nuevo circuito</button>
+          <button id="resAddNode" class="btn small active">＋ Nodo</button>
+          <button id="resConnect" class="btn small">╱ Conectar</button>
+          <button id="resSelect" class="btn small">↖ Seleccionar</button>
+          <button id="resExample" class="btn small">Circuito ejemplo</button>
+        </div>
+        <div class="mine-canvas-wrap res-canvas-wrap"><svg id="resCanvas" viewBox="0 0 1000 560" role="application" aria-label="Dibujo de circuito de resistencia"></svg><div id="resEmpty" class="mine-empty"><b>Dibuja tu circuito</b><span>Agrega nodos y conéctalos para representar galerías.</span></div></div>
+        <p class="hint">Modo Nodo: haz clic en el plano. Modo Conectar: selecciona dos nodos. En resistencia equivalente introduce R y caudal por nodo o tramo. En mallas configura los datos físicos de cada galería.</p>
+      </section>
+      <aside class="card res-properties"><div id="resProperties"><b>Propiedades</b><p class="hint">Selecciona un nodo o una galería para configurar sus datos.</p></div></aside>
+    </div>
+    <section class="card res-calc-card" id="resCalcCard">
+      <h3>Condiciones de cálculo</h3>
+      <div class="res-input-grid">
+        <label class="field"><span class="lbl">Dato conocido</span><select id="resKnown"><option value="pressure">Presión disponible / medida</option><option value="flow">Caudal total conocido</option></select></label>
+        <label class="field" id="resPressureField"><span class="lbl">Presión (pulgadas de agua)</span><input id="resPressureIn" type="number" min="0.0001" step="any" value="1"><span class="hint">inH₂O · 1 inH₂O = 249,0889 Pa</span></label>
+        <label class="field" id="resFlowField" hidden><span class="lbl">Caudal total (m³/s)</span><input id="resFlowIn" type="number" min="0.0001" step="any" placeholder="Puedes usar el resultado de Caudales"></label><button type="button" id="resImportFlow" class="btn small">Traer caudal de Calculadora</button>
+        <button id="resCalculate" class="btn primary">Calcular resistencia</button>
+      </div>
+      <div id="resStatus" class="res-status" role="status">Define un nodo Entrada, un nodo Salida y la resistencia de cada galería.</div>
+      <div id="resOutput" class="res-output"><p class="hint">Los resultados aparecerán aquí.</p></div>
+    </section>
+    <section class="card res-theory" id="resTheoryCard">
+      <h3>Fundamento: ley de Atkinson</h3>
+      <div class="res-law">ΔP = R · Q²</div>
+      <p>Para el modelo cuadrático, la resistencia equivalente en serie es la suma de las resistencias; en paralelo se obtiene mediante la suma de las raíces inversas. En redes con mallas, AERIQ resuelve el equilibrio de presión y continuidad para obtener el caudal en cada ramal.</p>
+      <p class="hint">La presión en pulgadas debe ser diferencial de presión (por ejemplo, pulgadas de columna de agua), no una lectura aislada sin referencia. El factor geométrico de Atkinson y sus unidades se incorporarán después de contrastarlos con tus apuntes y con bibliografía técnica.</p>
+    </section>
+  </section>
+
+  <!-- ============ SIMULADOR 2D ============ -->
+  <section id="view-editor" class="view">
+    <div class="mine-head">
+      <div><h2 class="page-h">Editor 2D de ventilación</h2><p class="intro">Construye la red de la mina mediante nodos y galerías conectadas.</p></div>
+      <div class="mine-project"><label for="mineProjectName">Proyecto</label><input id="mineProjectName" maxlength="80" value="Mi mina"></div>
+    </div>
+    <div class="mine-toolbar card">
+      <button id="mineNewBlank" class="btn small">＋ Plano en blanco</button><button id="mineNewSample" class="btn small">▦ Mina de ejemplo</button>
+      <span class="mine-separator"></span>
+      <button id="mineToolSelect" class="btn small mine-tool active" data-tool="select">↖ Seleccionar</button>
+      <button id="mineToolNode" class="btn small mine-tool" data-tool="node">＋ Nodo</button>
+      <button id="mineToolBranch" class="btn small mine-tool" data-tool="branch">╱ Galería</button>
+      <span class="mine-separator"></span>
+      <label class="btn small file-btn">Importar imagen<input id="mineImportImage" type="file" accept="image/png,image/jpeg"></label>
+      <label class="btn small file-btn">Abrir proyecto<input id="mineImportJson" type="file" accept=".json,.aeriq.json,application/json"></label>
+      <button id="mineExport" class="btn small">Exportar JSON</button><button id="mineSave" class="btn primary small">Guardar</button>
+    </div>
+    <div class="mine-workspace">
+      <section class="mine-canvas-card card">
+        <div class="mine-canvas-top"><span id="mineStats">0 nodos · 0 ramales</span><div><button id="mineFit" class="btn small ghost">Ajustar vista</button><button id="mineClearImage" class="btn small ghost">Quitar imagen</button></div></div>
+        <div class="mine-canvas-wrap"><svg id="mineCanvas" viewBox="0 0 1000 700" role="application" aria-label="Plano 2D de ventilación"></svg><div id="mineEmpty" class="mine-empty"><b>Tu plano está vacío</b><span>Selecciona «＋ Nodo» y haz clic en el plano para comenzar.</span></div></div>
+        <p class="hint">Dibujo libre: crea nodos donde necesites y conecta dos nodos con la herramienta Galería. Arrastra los nodos para reorganizar el plano.</p>
+      </section>
+      <aside class="mine-properties card"><div id="mineProperties"><div class="mine-prop-empty"><b>Propiedades</b><p>Selecciona un nodo o una galería para editar sus datos.</p></div></div></aside>
+    </div>
+    <section class="card mine-sim-card" aria-labelledby="mineSimTitle">
+      <div class="mine-sim-head"><div><h3 id="mineSimTitle">Simulación de red · AERIQ 1.6</h3><p class="hint">Calcula la distribución de caudal en una red conectada a nodos de entrada y salida, usando resistencias R conocidas.</p></div><span class="mine-sim-tag">Motor experimental</span></div>
+      <div class="mine-sim-controls">
+        <label>Presión en entradas (Pa)<input id="simSupplyPressure" type="number" min="0.1" step="any" value="100"></label>
+        <label>Presión en salidas (Pa)<input id="simReturnPressure" type="number" step="any" value="0"></label>
+        <label>Tolerancia<input id="simTolerance" type="number" min="0.000001" step="any" value="0.0001"></label>
+        <button id="mineSimulate" class="btn primary">▶ Simular red</button>
+      </div>
+      <div id="mineSimStatus" class="mine-sim-status" role="status">Asigna al menos un nodo Entrada, un nodo Salida y una resistencia positiva a cada galería.</div>
+      <div id="mineSimResults" class="mine-sim-results"><p class="hint">Los resultados aparecerán aquí después de ejecutar la simulación.</p></div>
+      <p class="hint">Método implementado: equilibrio nodal no lineal para ΔP = R·Q·|Q|. Hardy Cross y el cálculo geométrico de Atkinson quedan identificados como siguientes módulos; no se presentan como si ya estuvieran implementados. Los valores de ejemplo son didácticos, no datos de diseño.</p>
+    </section>
+    <div class="card mine-note"><b>Almacenamiento local</b><p>Los proyectos se guardan en este dispositivo. Exporta una copia JSON para respaldarlos o trasladarlos a otro equipo. DXF, vista 3D y sincronización en nube siguen en desarrollo.</p></div>
+  </section>
+
+  <!-- ============ HISTORIAL ============ -->
+  <section id="view-hist" class="view">
+    <div class="row-between">
+      <h2 class="page-h">Historial</h2>
+      <button id="csvBtn" class="btn small">Exportar CSV</button>
+    </div>
+    <div id="histList"></div>
+  </section>
+
+  <!-- ============ ACERCA ============ -->
+  <section id="view-about" class="view">
+    <h2 class="page-h">Acerca de AERIQ</h2>
+    <div class="card prose">
+      <p><strong>AERIQ</strong> es la evolución de una visión del Ingeniero Steven Casas para pasar del cálculo manual a uno digital: la misma lógica de cálculo, ahora como aplicación web instalable que funciona sin conexión.</p>
+      <h3>Fórmulas</h3>
+      <ul class="formulas">
+        <li><b>Personal</b> <code>Q = N × q<sub>p</sub></code> (q<sub>p</sub> según altitud y método)</li>
+        <li><b>Metano</b> <code>Q = 100 · (V<sub>CH₄</sub> · P) / T<sub>turno</sub></code></li>
+        <li><b>Voladura</b> <code>Q = (100 · 0,04 · A) / (0,008 · t)</code></li>
+        <li><b>Maquinaria</b> <code>Q = HP × 4</code> si CO ≤ 0,08 % · <code>Q = HP × 6</code> si 0,08 % &lt; CO ≤ 0,12 %</li>
+        <li><b>Total</b> <code>Q<sub>req</sub> = (ΣQ) × FS</code></li>
+      </ul>
+      <p class="hint">Si el CO del exosto supera 0,12 %, AERIQ no asigna un factor de caudal para maquinaria y bloquea el total. Los resultados son una herramienta de apoyo: verifica la normativa vigente y el criterio del ingeniero responsable.</p>
+      <h3>Próximamente</h3>
+      <ul>
+        <li>Selección de ventiladores y curvas de operación</li>
+        <li>Pérdidas de carga en ductos y redes</li>
+        <li>Monitoreo de gases y caudales</li>
+      </ul>
+      <p class="hint">Versión <span id="ver">1.5.0</span> · Tus datos se guardan solo en este dispositivo.</p>
+    </div>
+  </section>
+</main>
+
+<button id="sidebarToggle" class="sidebar-toggle" type="button" aria-label="Cerrar menú de herramientas" aria-expanded="true" aria-controls="toolSidebar" title="Cerrar menú de herramientas">
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14.5 5-7 7 7 7"/></svg>
+</button>
+
+<nav id="toolSidebar" class="tool-sidebar" aria-label="Herramientas principales">
+  <div class="nav-heading">HERRAMIENTAS</div>
+  <button class="tool-link active" data-module="calc" type="button">
+    <span class="tool-icon"><svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 12h2m2 0h2m-6 4h2m2 0h2"/></svg></span>
+    <span>Calculadora de caudales</span>
+  </button>
+  <button class="tool-link" data-module="resistance" type="button">
+    <span class="tool-icon"><svg viewBox="0 0 24 24"><path d="M3 18h4l2-4 3 2 3-8 2 4h4"/><path d="M3 5v14h18"/></svg></span>
+    <span>Resistencia de la mina</span>
+  </button>
+  <button class="tool-link" data-module="editor" type="button">
+    <span class="tool-icon"><svg viewBox="0 0 24 24"><path d="M3 5h18v14H3zM3 10h18M9 5v14m6-14v14"/><circle cx="9" cy="10" r="1.5"/><circle cx="15" cy="15" r="1.5"/></svg></span>
+    <span>Editor 2D de mina</span>
+  </button>
+  <button class="tool-link coming" data-coming="Selección de ventiladores y curvas de operación" type="button">
+    <span class="tool-icon"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 3v18M3 12h18"/></svg></span>
+    <span>Selección de ventiladores<small>Próximamente</small></span>
+  </button>
+  <button class="tool-link coming" data-coming="Pérdidas de carga en ductos y redes" type="button">
+    <span class="tool-icon"><svg viewBox="0 0 24 24"><path d="M4 4h7v7H4zM13 13h7v7h-7zM11 7h5a2 2 0 0 1 2 2v4"/></svg></span>
+    <span>Pérdidas de carga<small>Próximamente</small></span>
+  </button>
+  <button class="tool-link coming" data-coming="Monitoreo de gases y caudales" type="button">
+    <span class="tool-icon"><svg viewBox="0 0 24 24"><path d="M3 12h3l2-6 4 12 3-8 2 2h4"/></svg></span>
+    <span>Monitoreo de gases<small>Próximamente</small></span>
+  </button>
+</nav>
+
+<nav class="subnav" aria-label="Opciones de la calculadora">
+  <button data-subview="calc" class="active" type="button">
+    <svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 7h8M8 12h2m2 0h2m-6 4h2m2 0h2"/></svg><span>Calcular</span>
+  </button>
+  <button data-subview="hist" type="button">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span>Historial</span>
+  </button>
+  <button data-subview="about" type="button">
+    <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h0"/></svg><span>Acerca de</span>
+  </button>
+</nav>
+
+<div id="toast" role="status"></div>
+<div id="iosHint" class="ios-hint" hidden>Para instalar: toca <b>Compartir</b> y luego <b>“Añadir a pantalla de inicio”</b>. <button class="btn small" id="iosClose">Entendido</button></div>
+
+<!-- Informe para impresión / PDF -->
+<div id="report"></div>
+
+<script src="calc.js"></script>
+<script src="app.js"></script>
+<script src="network.js"></script>
+<script src="editor.js"></script>
+<script src="resistance.js"></script>
+</body>
+</html>

@@ -1,0 +1,41 @@
+AERIQ 1.6.1 · CORRECCIÓN DE RESISTENCIA EQUIVALENTE, MALLAS Y UNIDADES
+
+CAMBIOS PRINCIPALES
+
+1. RESISTENCIAS EQUIVALENTES
+- Es un apartado independiente del análisis de mallas.
+- Permite dibujar nodos y tramos conectados.
+- Los identificadores se asignan consecutivamente desde N1 para nodos y R1 para tramos.
+- Al seleccionar un nodo se puede editar su nombre, tipo y caudal (m³/s).
+- Al seleccionar un tramo se puede editar su nombre, resistencia R (Pa·s²/m⁶) y caudal Q (m³/s).
+- No muestra geometría, materiales ni campos de Atkinson en este apartado.
+- Calcula la resistencia equivalente para circuitos reducibles en serie y paralelo.
+
+2. ANÁLISIS DE RED MALLADA
+- Conserva el panel completo de propiedades físicas de las galerías y el cálculo geométrico de Atkinson que ya estaba en la versión previa.
+- Sus identificadores empiezan desde N0 para nodos y R0 para tramos.
+- Los circuitos de resistencia equivalente y de mallas se guardan por separado para que dibujar en uno no modifique el otro.
+- El solucionador actual usa equilibrio nodal no lineal de presión y continuidad. No debe confundirse con Hardy Cross ni con un método independiente de mallas de los apuntes de clase.
+
+3. CALCULADORA DE CAUDALES
+- El selector de unidades de resultados permite alternar entre m³/min y CFM.
+- El motor conserva m³/min como unidad base y convierte la presentación; cambiar unidades no altera el cálculo.
+
+MODELOS Y UNIDADES
+- Ley cuadrática: ΔP = R·Q², con Q en m³/s y ΔP en Pa.
+- Serie: Req = ΣR.
+- Paralelo: Req = [Σ(1/√Ri)]^-2.
+- Atkinson en mallas: R = K (L + Leq) Per / A³, sujeto a que K, geometría y unidades estén validados para el caso estudiado.
+
+PRUEBAS REALIZADAS
+- Revisión de sintaxis JavaScript con node --check en app.js, calc.js, editor.js, network.js y resistance.js.
+- Verificación de la estructura e integridad del archivo ZIP.
+- No se ha realizado todavía una prueba interactiva en navegador real.
+
+INSTALACIÓN
+- Descomprimir el ZIP.
+- Abrir index.html para una prueba local, o publicar el contenido de aeriq_v15 en el hosting estático.
+- En una PWA ya instalada, cerrar y volver a abrir la aplicación para que el nuevo service worker actualice la caché.
+
+NOTA TÉCNICA
+Los valores de resistencia, coeficientes K y resultados de redes deben validarse con apuntes, bibliografía, mediciones y un profesional competente antes de utilizarse para decisiones operacionales o de seguridad.
