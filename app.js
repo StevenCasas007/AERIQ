@@ -1,7 +1,7 @@
 /* AERIQ · interfaz */
 (function () {
   'use strict';
-  const VERSION = '1.6.2';
+  const VERSION = '1.6.4';
   const C = window.AERIQCalc;
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -281,18 +281,28 @@
         <tr><td>Factor de seguridad</td><td class="n">${fmt(r.k, 2)}</td><td></td></tr>
       </tbody></table>
       <h2 class="report-chart-title">Distribución del caudal total requerido</h2>
-      <p class="report-chart-note">Participación de cada componente en el caudal total requerido, con el factor de seguridad aplicado.</p>
-      <div class="report-bars">
-        ${Object.entries(COMP).map(([k, m]) => {
-          const adjusted = r.components[k] * r.k;
-          const pct = r.total > 0 ? (adjusted / r.total) * 100 : 0;
-          const color = ({ trabajadores: '#38bdf8', metano: '#5eead4', voladura: '#fbbf24', maquinaria: '#a78bfa' })[k];
-          return `<div class="report-bar-row"><div class="report-bar-meta"><b>${m.name}</b><span>${fmtU(adjusted)} ${u} · ${fmt(pct, 1)} %</span></div><div class="report-bar-track"><div class="report-bar-fill" style="width:${Math.max(0, Math.min(100, pct))}%;background:${color}"></div></div></div>`;
-        }).join('')}
+      <p class="report-chart-note">Caudal de cada componente después de aplicar el factor de seguridad. Cada barra representa su participación en el total.</p>
+      <div class="report-chart-wrap">
+        <svg class="report-chart-svg" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 270" role="img" aria-label="Gráfica de barras de caudal requerido por componente">
+          <rect x="0" y="0" width="760" height="270" fill="#ffffff" />
+          ${[0,25,50,75,100].map((v) => {
+            const x = 190 + (v * 4.2);
+            return `<line x1="${x}" y1="24" x2="${x}" y2="226" stroke="#d9e0e9" stroke-width="1"/><text x="${x}" y="249" fill="#475569" font-size="12" text-anchor="middle">${v}%</text>`;
+          }).join('')}
+          ${Object.entries(COMP).map(([k, m], i) => {
+            const adjusted = r.components[k] * r.k;
+            const pct = r.total > 0 ? Math.max(0, Math.min(100, (adjusted / r.total) * 100)) : 0;
+            const width = pct * 4.2;
+            const y = 35 + i * 49;
+            const color = ({ trabajadores: '#0284c7', metano: '#0f9f91', voladura: '#d97706', maquinaria: '#7c3aed' })[k];
+            return `<text x="176" y="${y + 17}" fill="#111827" font-size="14" font-weight="700" text-anchor="end">${m.name}</text><rect x="190" y="${y}" width="420" height="25" rx="6" fill="#edf1f6"/><rect x="190" y="${y}" width="${width}" height="25" rx="6" fill="${color}"/><text x="625" y="${y + 17}" fill="#111827" font-size="12" font-weight="600">${fmtU(adjusted)} ${u} · ${fmt(pct, 1)}%</text>`;
+          }).join('')}
+        </svg>
       </div>
       <div class="tot">Caudal total requerido: ${fmtU(r.total)} ${u}</div>
       <div class="foot">Generado con AERIQ v${VERSION}. Herramienta de apoyo: verificar coeficientes con la normativa vigente y el ingeniero responsable.</div>`;
-    window.print();
+    // Espera a que el navegador pinte el SVG antes de abrir el diálogo de impresión.
+    requestAnimationFrame(() => requestAnimationFrame(() => window.print()));
   });
 
   /* ---------- menú lateral plegable ---------- */

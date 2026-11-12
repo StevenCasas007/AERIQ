@@ -49,7 +49,7 @@ main{max-width:1240px;margin:0 auto;padding:24px}
 .layout{display:grid;gap:16px}
 @media (min-width:900px){
   .layout{grid-template-columns:minmax(0,1fr) 380px;align-items:start}
-  .result-column{position:sticky;top:84px;align-self:start;display:grid;gap:12px;min-width:0}
+  .result-column{position:static;align-self:start;display:grid;gap:12px;min-width:0}
   #result{position:static}
 }
 
@@ -355,4 +355,17 @@ body.sidebar-collapsed .sidebar-toggle svg{transform:rotate(180deg)}
   #report .report-bar-meta span{font-family:var(--mono);white-space:nowrap}
   #report .report-bar-track{height:13px;border-radius:99px;background:#e8edf4;overflow:hidden;border:1px solid #d5dce6}
   #report .report-bar-fill{height:100%;min-width:0;border-radius:99px}
+}
+
+/* AERIQ 1.6.4 · el resultado y el conversor se desplazan juntos en el flujo normal */
+@media (min-width:900px){
+  .result-column{position:static !important;top:auto !important;align-self:start;display:grid;gap:12px;min-width:0}
+  #result{position:static !important}
+}
+/* Gráfica SVG del informe: impresión fiable en PDF */
+.report-chart-wrap{width:100%;max-width:760px;margin:10px 0 14px;break-inside:avoid;page-break-inside:avoid}
+.report-chart-svg{display:block;width:100%;height:auto;background:#fff}
+@media print{
+  #report .report-chart-wrap{display:block;width:100%;max-width:760px;margin:10px 0 14px;break-inside:avoid;page-break-inside:avoid}
+  #report .report-chart-svg{display:block;width:100%;height:auto;print-color-adjust:exact;-webkit-print-color-adjust:exact}
 }
