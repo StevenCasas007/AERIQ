@@ -85,6 +85,7 @@
         </div>
       </form>
 
+      <div class="result-column">
       <aside id="result" class="card result" aria-live="polite">
         <div class="res-head">
           <span class="lbl">Caudal total requerido</span>
@@ -106,6 +107,18 @@
           <button type="button" id="printBtn" class="btn">PDF / Imprimir</button>
         </div>
       </aside>
+      <section class="card quick-converter" aria-labelledby="quickConverterTitle">
+        <div class="converter-heading">
+          <div><h2 id="quickConverterTitle">Conversión rápida de caudal</h2><p class="hint">Conversor independiente · no modifica el cálculo de ventilación.</p></div>
+          <span class="converter-mark" aria-hidden="true">⇄</span>
+        </div>
+        <div class="converter-grid">
+          <label><span>m³/s</span><input id="convertM3s" type="text" inputmode="decimal" placeholder="0"></label>
+          <label><span>m³/min</span><input id="convertM3min" type="text" inputmode="decimal" placeholder="0"></label>
+          <label><span>CFM</span><input id="convertCfm" type="text" inputmode="decimal" placeholder="0"></label>
+        </div>
+      </section>
+      </div>
     </div>
   </section>
 

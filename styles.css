@@ -49,7 +49,8 @@ main{max-width:1240px;margin:0 auto;padding:24px}
 .layout{display:grid;gap:16px}
 @media (min-width:900px){
   .layout{grid-template-columns:minmax(0,1fr) 380px;align-items:start}
-  #result{position:sticky;top:84px}
+  .result-column{position:sticky;top:84px;align-self:start;display:grid;gap:12px;min-width:0}
+  #result{position:static}
 }
 
 /* ---------- cards & fields ---------- */
@@ -329,3 +330,29 @@ body.sidebar-collapsed .sidebar-toggle{left:8px;border-radius:9px}
 body.sidebar-collapsed .sidebar-toggle svg{transform:rotate(180deg)}
 @media(max-width:760px){.sidebar-toggle{top:70px;width:28px;height:42px;left:calc(var(--sidebar-w) - 13px)}body.sidebar-collapsed .sidebar-toggle{left:6px}}
 @media(prefers-reduced-motion:reduce){.tool-sidebar,.sidebar-toggle,.sidebar-toggle svg{transition:none}}
+
+
+/* AERIQ 1.6.3 · conversor rápido independiente y barras del informe */
+.result-column{min-width:0}
+.quick-converter{margin:0;padding:14px 16px;background:linear-gradient(145deg,var(--surface),color-mix(in srgb,var(--surface2) 72%,var(--surface)))}
+.converter-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:12px}
+.converter-heading h2{margin:0 0 3px;font-size:13px;letter-spacing:.04em;text-transform:none;color:var(--text)}
+.converter-heading .hint{margin:0;font-size:11px;line-height:1.4}
+.converter-mark{display:grid;place-items:center;width:30px;height:30px;flex:0 0 30px;border-radius:9px;background:color-mix(in srgb,var(--accent) 14%,var(--surface2));color:var(--accent);font-size:19px;font-weight:800}
+.converter-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.converter-grid label{display:grid;gap:5px;min-width:0}
+.converter-grid label span{font-size:11px;color:var(--muted);font-weight:750}
+.converter-grid input{width:100%;min-width:0;padding:9px 8px;border:1px solid var(--line);border-radius:9px;background:var(--surface2);color:var(--text);font:600 13px var(--mono);font-variant-numeric:tabular-nums;outline:none}
+.converter-grid input:focus{border-color:var(--accent);box-shadow:0 0 0 3px color-mix(in srgb,var(--accent) 16%,transparent)}
+@media(max-width:899px){.result-column{display:grid;gap:12px}.quick-converter{margin-bottom:16px}}
+@media(max-width:420px){.converter-grid{gap:6px}.converter-grid input{font-size:12px;padding:9px 6px}}
+@media print{
+  #report .report-chart-title{font-size:16px;margin:18px 0 2px;color:#111}
+  #report .report-chart-note{font-size:10px;color:#555;margin:0 0 10px}
+  #report .report-bars{display:grid;gap:10px;margin:8px 0 14px;break-inside:avoid}
+  #report .report-bar-row{break-inside:avoid}
+  #report .report-bar-meta{display:flex;justify-content:space-between;gap:12px;font-size:11px;margin-bottom:4px}
+  #report .report-bar-meta span{font-family:var(--mono);white-space:nowrap}
+  #report .report-bar-track{height:13px;border-radius:99px;background:#e8edf4;overflow:hidden;border:1px solid #d5dce6}
+  #report .report-bar-fill{height:100%;min-width:0;border-radius:99px}
+}

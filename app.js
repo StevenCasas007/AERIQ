@@ -161,6 +161,30 @@
   $('#form').addEventListener('submit', e => e.preventDefault());
   $$('input[name=method]').forEach(r => r.addEventListener('change', e => { state.method = e.target.value; update(); }));
   $$('input[name=unit]').forEach(r => r.addEventListener('change', e => { state.unit = e.target.value; update(); }));
+  /* ---------- conversor rápido independiente (no interviene en el cálculo) ---------- */
+  const converterInputs = { m3s: $('#convertM3s'), m3min: $('#convertM3min'), cfm: $('#convertCfm') };
+  const parseConverter = value => {
+    const normalized = String(value).trim().replace(/\s/g, '').replace(',', '.');
+    return normalized === '' ? NaN : Number(normalized);
+  };
+  const converterFmt = value => Number.isFinite(value)
+    ? String(Number(value.toFixed(6))) : '';
+  function updateQuickConverter(source) {
+    const value = parseConverter(converterInputs[source].value);
+    if (!Number.isFinite(value)) {
+      Object.entries(converterInputs).filter(([key]) => key !== source).forEach(([, input]) => { input.value = ''; });
+      return;
+    }
+    if (value < 0) return;
+    const m3s = source === 'm3s' ? value : source === 'm3min' ? value / 60 : value / (60 * C.CFM_PER_M3MIN);
+    const values = { m3s, m3min: m3s * 60, cfm: m3s * 60 * C.CFM_PER_M3MIN };
+    Object.entries(converterInputs).forEach(([key, input]) => {
+      if (key !== source) input.value = converterFmt(values[key]);
+    });
+  }
+  Object.entries(converterInputs).forEach(([key, input]) => {
+    input.addEventListener('input', () => updateQuickConverter(key));
+  });
   $('#clearBtn').addEventListener('click', () => {
     FIELD_IDS.forEach(id => { $('#f_' + id).value = ''; });
     $('#nombre').value = '';
@@ -256,6 +280,16 @@
         <tr><td><b>Suma (sin FS)</b></td><td class="n"><b>${fmtU(r.subtotal)}</b></td><td></td></tr>
         <tr><td>Factor de seguridad</td><td class="n">${fmt(r.k, 2)}</td><td></td></tr>
       </tbody></table>
+      <h2 class="report-chart-title">Distribución del caudal total requerido</h2>
+      <p class="report-chart-note">Participación de cada componente en el caudal total requerido, con el factor de seguridad aplicado.</p>
+      <div class="report-bars">
+        ${Object.entries(COMP).map(([k, m]) => {
+          const adjusted = r.components[k] * r.k;
+          const pct = r.total > 0 ? (adjusted / r.total) * 100 : 0;
+          const color = ({ trabajadores: '#38bdf8', metano: '#5eead4', voladura: '#fbbf24', maquinaria: '#a78bfa' })[k];
+          return `<div class="report-bar-row"><div class="report-bar-meta"><b>${m.name}</b><span>${fmtU(adjusted)} ${u} · ${fmt(pct, 1)} %</span></div><div class="report-bar-track"><div class="report-bar-fill" style="width:${Math.max(0, Math.min(100, pct))}%;background:${color}"></div></div></div>`;
+        }).join('')}
+      </div>
       <div class="tot">Caudal total requerido: ${fmtU(r.total)} ${u}</div>
       <div class="foot">Generado con AERIQ v${VERSION}. Herramienta de apoyo: verificar coeficientes con la normativa vigente y el ingeniero responsable.</div>`;
     window.print();
