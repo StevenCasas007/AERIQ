@@ -1,7 +1,7 @@
 /* AERIQ · interfaz */
 (function () {
   'use strict';
-  const VERSION = '1.6.7';
+  const VERSION = '1.6.8';
   const C = window.AERIQCalc;
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
