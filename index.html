@@ -134,6 +134,11 @@
     <div class="resistance-workspace">
       <section class="card res-drawing-card">
         <div class="mine-toolbar res-toolbar">
+          <div class="res-file-actions" data-equivalent-only>
+            <button id="resSaveFile" class="btn small primary" type="button">↓ Guardar circuito</button>
+            <button id="resOpenFile" class="btn small" type="button">↑ Abrir circuito</button>
+            <input id="resFileInput" type="file" accept=".json,application/json" hidden>
+          </div>
           <button id="resNew" class="btn small">＋ Nuevo circuito</button>
           <button id="resAddNode" class="btn small active">＋ Nodo</button>
           <button id="resConnect" class="btn small">╱ Conectar</button>

@@ -1,6 +1,6 @@
 /* AERIQ · service worker: cache del "app shell" para uso sin conexión.
    Sube el número de versión al cambiar cualquier archivo. */
-const CACHE = 'aeriq-v1.6.4-report-scroll-fix';
+const CACHE = 'aeriq-v1.6.5-equivalent-flow-file-save';
 const SHELL = [
   './', 'index.html', 'styles.css', 'calc.js', 'app.js', 'network.js', 'editor.js', 'resistance.js', 'manifest.webmanifest',
   'icons/favicon.svg', 'icons/icon-192.png', 'icons/icon-512.png', 'icons/maskable-512.png', 'icons/apple-touch-icon.png',
