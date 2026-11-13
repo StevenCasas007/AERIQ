@@ -1,7 +1,7 @@
 /* AERIQ · interfaz */
 (function () {
   'use strict';
-  const VERSION = '1.6.4';
+  const VERSION = '1.6.7';
   const C = window.AERIQCalc;
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
@@ -325,7 +325,7 @@
   /* ---------- navegación ---------- */
   function show(v) {
     $$('.view').forEach(s => s.classList.toggle('active', s.id === 'view-' + v));
-    const module = ['calc','hist','about'].includes(v) ? 'calc' : v;
+    const module = ['calc','hist'].includes(v) ? 'calc' : v;
     $$('.tool-sidebar [data-module]').forEach(b => b.classList.toggle('active', b.dataset.module === module));
     $$('.subnav [data-subview]').forEach(b => b.classList.toggle('active', b.dataset.subview === v));
     document.body.classList.toggle('module-resistance', module === 'resistance');

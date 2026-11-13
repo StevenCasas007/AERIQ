@@ -184,7 +184,7 @@
       solutions.push({values,q:qIn,err});
     }
     if(!solutions.length)throw Error('Los caudales conocidos no permiten una reconstrucción coherente. Revisa sus valores, unidades y la conexión de los tramos.');
-    if(solutions.length>1)throw Error('Hay más de una distribución posible desde la Entrada hasta la Salida. Introduce otro caudal conocido para completar la reconstrucción.');
+    if(solutions.length>1)throw Error('La red admite más de una distribución dirigida desde Entrada hasta Salida. Revisa el sentido fijado en los caudales conocidos o introduce otro caudal conocido.');
     const sol=solutions[0];
     return {q:sol.q,flows:circuit.branches.map(b=>{const signed=sol.values.get(b.id)||0;return {...b,flow:signed,flowFrom:signed>=0?b.from:b.to,flowTo:signed>=0?b.to:b.from};})};
   }
@@ -240,8 +240,7 @@
           const reconstructed=reconstructByContinuity();
           q=reconstructed.q;distribution=reconstructed.flows;
           if(nodeQ!=null&&Math.abs(nodeQ-q)/q>0.05){
-            distributionWarning='El caudal de Entrada no coincide con los caudales conocidos; se conserva el cálculo de resistencia y se deja pendiente la reconstrucción.';
-            q=nodeQ;distribution=null;
+            distributionWarning=`El caudal registrado en el nodo Entrada (${fmt(nodeQ/0.00047194745)} CFM) no coincide con los caudales reconstruidos (${fmt(q/0.00047194745)} CFM). Se conserva la reconstrucción obtenida a partir de los caudales conocidos.`;
           }
         }catch(err){
           distributionWarning=err.message;
