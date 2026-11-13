@@ -162,10 +162,29 @@
       circuit.branches.forEach(b=>{const v=values.get(b.id)||0;balance.set(b.from,balance.get(b.from)+v);balance.set(b.to,balance.get(b.to)-v);});
       const scale=Math.max(1,...[...values.values()].map(Math.abs)),err=Math.max(0,...nodeIds.map(id=>Math.abs(balance.get(id))));
       const qIn=balance.get(inlet.id),qOut=-balance.get(outlet.id);
-      if(err<1e-7*scale&&qIn>1e-9&&qOut>1e-9&&Math.abs(qIn-qOut)<1e-7*scale)solutions.push({values,q:qIn,err});
+      if(!(err<1e-7*scale&&qIn>1e-9&&qOut>1e-9&&Math.abs(qIn-qOut)<1e-7*scale))continue;
+      // En este apartado el aire avanza desde la Entrada hacia la Salida.
+      // Descartar soluciones matemáticas que cumplen continuidad pero generan
+      // circulación en sentido contrario o ciclos internos (recirculación).
+      const outgoing=new Map(circuit.nodes.map(n=>[n.id,[]]));
+      const incoming=new Map(circuit.nodes.map(n=>[n.id,[]]));
+      const directed=[];
+      circuit.branches.forEach(b=>{
+        const v=values.get(b.id)||0;if(Math.abs(v)<=1e-10*scale)return;
+        const from=v>0?b.from:b.to,to=v>0?b.to:b.from;
+        outgoing.get(from).push(to);incoming.get(to).push(from);directed.push({from,to});
+      });
+      const reachable=(start,graph)=>{const seen=new Set([start]),todo=[start];while(todo.length){const id=todo.pop();(graph.get(id)||[]).forEach(next=>{if(!seen.has(next)){seen.add(next);todo.push(next);}});}return seen;};
+      const fromEntry=reachable(inlet.id,outgoing),toExit=reachable(outlet.id,incoming);
+      if(circuit.nodes.some(n=>!fromEntry.has(n.id)||!toExit.has(n.id)))continue;
+      const indegree=new Map(circuit.nodes.map(n=>[n.id,0]));directed.forEach(e=>indegree.set(e.to,indegree.get(e.to)+1));
+      const queue=[...indegree].filter(([,d])=>d===0).map(([id])=>id);let visited=0;
+      while(queue.length){const id=queue.shift();visited++;(outgoing.get(id)||[]).forEach(next=>{indegree.set(next,indegree.get(next)-1);if(indegree.get(next)===0)queue.push(next);});}
+      if(visited!==circuit.nodes.length)continue;
+      solutions.push({values,q:qIn,err});
     }
     if(!solutions.length)throw Error('Los caudales conocidos no permiten una reconstrucción coherente. Revisa sus valores, unidades y la conexión de los tramos.');
-    if(solutions.length>1)throw Error('La dirección del flujo no es única con los datos actuales. Introduce otro caudal conocido o revisa los nodos Entrada y Salida.');
+    if(solutions.length>1)throw Error('Hay más de una distribución posible desde la Entrada hasta la Salida. Introduce otro caudal conocido para completar la reconstrucción.');
     const sol=solutions[0];
     return {q:sol.q,flows:circuit.branches.map(b=>{const signed=sol.values.get(b.id)||0;return {...b,flow:signed,flowFrom:signed>=0?b.from:b.to,flowTo:signed>=0?b.to:b.from};})};
   }
@@ -214,12 +233,21 @@
       Req=reduceSeriesParallel();
       const inlet=circuit.nodes.find(n=>n.type==='Entrada');
       const knownFlows=circuit.branches.filter(b=>Number(b.flow)>0);
-      let distribution=null;
+      let distribution=null,distributionWarning='';
       const nodeQ=Number(inlet?.flow)>0?Number(inlet.flow):null;
       if(knownFlows.length){
-        const reconstructed=reconstructByContinuity();
-        q=reconstructed.q;distribution=reconstructed.flows;
-        if(nodeQ!=null&&Math.abs(nodeQ-q)/q>0.05)throw Error('El caudal del nodo Entrada no coincide con la reconstrucción por continuidad. Verifica los datos.');
+        try{
+          const reconstructed=reconstructByContinuity();
+          q=reconstructed.q;distribution=reconstructed.flows;
+          if(nodeQ!=null&&Math.abs(nodeQ-q)/q>0.05){
+            distributionWarning='El caudal de Entrada no coincide con los caudales conocidos; se conserva el cálculo de resistencia y se deja pendiente la reconstrucción.';
+            q=nodeQ;distribution=null;
+          }
+        }catch(err){
+          distributionWarning=err.message;
+          q=nodeQ;
+          distribution=null;
+        }
       }else if(nodeQ!=null){
         q=nodeQ;
         distribution=distributeByResistance(q).map(b=>({...b,flowFrom:b.flow>=0?b.from:b.to,flowTo:b.flow>=0?b.to:b.from}));
@@ -233,8 +261,8 @@
         return {id:b.id,from:b.from,to:b.to,flowFrom,flowTo,name:b.name,R,q:signed==null?null:Math.abs(signed),dp:signed==null?null:R*signed*signed};
       });
       $('resStatus').className='res-status success';
-      $('resStatus').textContent=q!=null?(knownFlows.length?'Distribución reconstruida mediante conservación del caudal en los nodos.':'Distribución estimada por reducción serie/paralelo y resistencias.'):'Resistencia equivalente calculada. Introduce caudales conocidos en los tramos o un caudal total de entrada para analizar la distribución.';
-      $('resOutput').innerHTML=`<div class="res-metrics"><div class="res-metric"><small>Resistencia equivalente Rₑq</small><strong>${fmt(Req)}</strong><small>Pa·s²/m⁶</small></div>${q!=null?`<div class="res-metric"><small>Caudal total</small><strong>${fmt(q)}</strong><small>m³/s · ${fmt(q/0.00047194745)} CFM</small></div>`:''}${dp!=null?`<div class="res-metric"><small>Caída de presión</small><strong>${fmt(dp)}</strong><small>Pa</small></div>`:''}</div><h4>Distribución de caudales por tramo</h4><div class="mine-results-scroll"><table><thead><tr><th>Tramo</th><th>Sentido del flujo</th><th>Q (m³/s)</th><th>Q (CFM)</th><th>R (Pa·s²/m⁶)</th><th>ΔP (Pa)</th></tr></thead><tbody>${rows.map(b=>`<tr><td>${esc(b.id)} · ${esc(b.name||'')}</td><td>${esc(b.flowFrom)} → ${esc(b.flowTo)}</td><td>${b.q==null?'No asignado':fmt(b.q)}</td><td>${b.q==null?'No asignado':fmt(b.q/0.00047194745)}</td><td>${fmt(b.R)}</td><td>${b.dp==null?'—':fmt(b.dp)}</td></tr>`).join('')}</tbody></table></div><p class="hint">Con caudales manuales conocidos, la distribución se reconstruye mediante conservación del caudal en cada nodo y se infiere el caudal total. Si solo se conoce el caudal de entrada, la distribución se estima a partir de las resistencias mediante reducción serie/paralelo. Este apartado no utiliza el solucionador de mallas.</p><button type="button" class="btn primary" id="resExportReport">Exportar informe · PDF</button>`;
+      $('resStatus').textContent=distributionWarning?`Resistencia equivalente calculada. Distribución pendiente: ${distributionWarning}`:q!=null?(knownFlows.length?'Distribución reconstruida mediante conservación del caudal en los nodos.':'Distribución estimada por reducción serie/paralelo y resistencias.'):'Resistencia equivalente calculada. Introduce caudales conocidos en los tramos o un caudal total de entrada para analizar la distribución.';
+      $('resOutput').innerHTML=`<div class="res-metrics"><div class="res-metric"><small>Resistencia equivalente Rₑq</small><strong>${fmt(Req)}</strong><small>Pa·s²/m⁶</small></div>${q!=null?`<div class="res-metric"><small>Caudal total</small><strong>${fmt(q)}</strong><small>m³/s · ${fmt(q/0.00047194745)} CFM</small></div>`:''}${dp!=null?`<div class="res-metric"><small>Caída de presión</small><strong>${fmt(dp)}</strong><small>Pa</small></div>`:''}</div><h4>Distribución de caudales por tramo</h4><div class="mine-results-scroll"><table><thead><tr><th>Tramo</th><th>Sentido del flujo</th><th>Q (m³/s)</th><th>Q (CFM)</th><th>R (Pa·s²/m⁶)</th><th>ΔP (Pa)</th></tr></thead><tbody>${rows.map(b=>`<tr><td>${esc(b.id)} · ${esc(b.name||'')}</td><td>${esc(b.flowFrom)} → ${esc(b.flowTo)}</td><td>${b.q==null?'No asignado':fmt(b.q)}</td><td>${b.q==null?'No asignado':fmt(b.q/0.00047194745)}</td><td>${fmt(b.R)}</td><td>${b.dp==null?'—':fmt(b.dp)}</td></tr>`).join('')}</tbody></table></div><p class="hint">${distributionWarning?`La resistencia equivalente sí fue calculada. La distribución automática quedó pendiente: ${esc(distributionWarning)} `:''}Con caudales manuales conocidos, la distribución se reconstruye mediante conservación del caudal en cada nodo y se infiere el caudal total. Si solo se conoce el caudal de entrada, la distribución se estima a partir de las resistencias mediante reducción serie/paralelo. Este apartado no utiliza el solucionador de mallas.</p><button type="button" class="btn primary" id="resExportReport">Exportar informe · PDF</button>`;
       const reportResult={Req,q,dp,rows};$('resExportReport').onclick=()=>exportFlowReport(reportResult,'equivalent');
       circuit.lastResult={date:new Date().toISOString(),method,Req,flow:q,pressurePa:dp,branches:rows.map(b=>({id:b.id,flow:b.q,pressureDrop:b.dp}))};save();return;
     }else{base=unitPressureSolve();Req=1/(base.qUnit*base.qUnit);if(known==='pressure'){const inchIn=Number($('resPressureIn').value);if(!(inchIn>0))throw Error('Ingresa una presión diferencial positiva en pulgadas de agua.');dp=inchIn*INH2O;q=base.qUnit*Math.sqrt(dp);}else{const inlet=circuit.nodes.find(n=>n.type==='Entrada'),nodeQ=Number(inlet?.flow)||0;q=nodeQ>0?nodeQ:Number($('resFlowIn').value);if(!(q>0))throw Error('Ingresa un caudal positivo en el nodo de entrada o en las condiciones de cálculo.');dp=Req*q*q;}flows=base.flows.map(b=>({...b,actualFlow:b.flow*Math.sqrt(dp),actualDp:b.dp*dp}));}const inch=dp/INH2O;
